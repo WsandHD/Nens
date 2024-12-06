@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClueCatch</title>
+    <style>
+        /* Estilos gerais */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            transition: background 1s;
+            color: white;
+            position: relative;
+        }
+
+        /* Conteúdo principal */
+        .search-container {
+            text-align: center;
+            padding: 50px 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .search-container h1 {
+            font-size: 3rem;
+            color: #ffcc00; /* Cor amarela vibrante */
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 2; /* Faz com que o título fique sobrepondo a lua */
+        }
+
+        .search-container p {
+            margin: 10px 0;
+            font-size: 1.2rem;
+        }
+
+        .search-container input[type="text"] {
+            width: 300px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 20px; /* Bordas arredondadas */
+            margin-bottom: 10px;
+        }
+
+        .search-container button {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 20px; /* Bordas arredondadas */
+            cursor: pointer;
+        }
+
+        .search-container button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Lua estilizada */
+        .moon {
+            position: absolute;
+            top: 10%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.7);
+            z-index: 1; /* Lua atrás do título */
+        }
+
+        /* Adicionar sites */
+        .admin-container {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            z-index: 100;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .admin-container input,
+        .admin-container textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        .admin-container button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .admin-container button:hover {
+            background-color: #218838;
+        }
+
+        .admin-container .cancel-btn {
+            background-color: #dc3545;
+        }
+
+        .admin-container .cancel-btn:hover {
+            background-color: #c82333;
+        }
+
+        .site-list {
+            margin-top: 20px;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .site-list p {
+            margin: 5px 0;
+        }
+
+        .site-list button {
+            margin-left: 10px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .site-list button:hover {
+            background-color: #c82333;
+        }
+
+        /* Estilo para os resultados da pesquisa */
+        .search-result {
+            margin-top: 20px;
+            background-color: white;
+            color: black;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            text-align: left;
+        }
+
+        .search-result h2 {
+            font-size: 1.5rem;
+            color: #333;
+        }
+
+        .search-result p {
+            font-size: 1rem;
+            color: #555;
+        }
+
+        .search-result a {
+            color: #007BFF;
+            text-decoration: none;
+        }
+
+        .search-result a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <!-- Conteúdo principal -->
+    <div class="search-container">
+        <div class="moon" id="moon"></div>
+        <h1>ClueCatch</h1>
+        <input type="text" id="searchInput" placeholder="Digite sua pesquisa...">
+        <button onclick="performSearch()">Pesquisar</button>
+        
+        <!-- Resultados da pesquisa aparecerão aqui -->
+        <div id="searchResult" class="search-result"></div>
+    </div>
+
+    <!-- Tela de administração para adicionar sites -->
+    <div class="admin-container" id="adminContainer">
+        <h2>Adicionar Site</h2>
+        <input type="text" id="siteTitle" placeholder="Título do site">
+        <textarea id="siteDescription" placeholder="Descrição do site"></textarea>
+        <input type="url" id="siteURL" placeholder="URL do site">
+        <button onclick="addSite()">Adicionar</button>
+        <button class="cancel-btn" onclick="closeAdminPanel()">Voltar</button>
+        <div class="site-list" id="siteList"></div>
+        <br>
+        <button onclick="toggleAppearance('day')">Dia</button>
+        <button onclick="toggleAppearance('afternoon')">Tarde</button>
+        <button onclick="toggleAppearance('night')">Noite</button>
+    </div>
+
+    <script>
+        // Detecta o horário do dia e ajusta o fundo
+        function updateBackground(isDay, isAfternoon) {
+            const body = document.body;
+            const moon = document.getElementById('moon');
+
+            if (isDay) {
+                body.style.background = "linear-gradient(135deg, #00b0ff, #1e88e5)";  // Azul claro (Dia)
+                moon.style.background = 'yellow';  // Lua amarela
+            } else if (isAfternoon) {
+                body.style.background = "linear-gradient(135deg, #ff9e2c, #f9c833)";  // Tarde
+                moon.style.background = 'yellow';  // Lua amarela
+            } else {
+                body.style.background = "linear-gradient(135deg, #1e3c72, #2a5298)";  // Noite
+                moon.style.background = 'white';  // Lua branca
+            }
+        }
+
+        // Alterar a aparência para dia, tarde ou noite manualmente
+        function toggleAppearance(timeOfDay) {
+            if (timeOfDay === "day") {
+                updateBackground(true, false);
+            } else if (timeOfDay === "afternoon") {
+                updateBackground(false, true);
+            } else {
+                updateBackground(false, false);
+            }
+        }
+
+        // Abre o painel de administração se "admin" for digitado
+        function performSearch() {
+            const searchInput = document.getElementById('searchInput').value;
+            const searchResult = document.getElementById('searchResult');
+            if (searchInput.trim().toLowerCase() === "admin") {
+                openAdminPanel();
+            } else if (searchInput.trim() === '') {
+                searchResult.textContent = 'Por favor, insira um termo para pesquisar.';
+            } else {
+                searchResult.innerHTML = ''; // Limpar resultados anteriores
+
+                const sites = JSON.parse(localStorage.getItem('sites')) || [];
+                const filteredSites = sites.filter(site =>
+                    site.title.toLowerCase().includes(searchInput.toLowerCase())
+                    || site.description.toLowerCase().includes(searchInput.toLowerCase())
+                );
+
+                if (filteredSites.length > 0) {
+                    filteredSites.forEach(site => {
+                        searchResult.innerHTML += ` 
+                            <div> 
+                                <h2>${site.title}</h2>
+                                <p>${site.description}</p>
+                                <a href="${site.url}" target="_blank">${site.url}</a>
+                            </div>
+                        `;
+                    });
+                } else {
+                    searchResult.innerHTML = '<p>Nenhum site encontrado.</p>';
+                }
+            }
+        }
+
+        // Abre o painel de administração
+        function openAdminPanel() {
+            document.getElementById('adminContainer').style.display = 'flex';
+            loadSites(); // Carregar os sites quando o painel for aberto
+        }
+
+        // Fecha o painel de administração
+        function closeAdminPanel() {
+            document.getElementById('adminContainer').style.display = 'none';
+        }
+
+        // Adiciona um novo site
+        function addSite() {
+            const title = document.getElementById('siteTitle').value;
+            const description = document.getElementById('siteDescription').value;
+            const url = document.getElementById('siteURL').value;
+
+            if (title && description && url) {
+                const sites = JSON.parse(localStorage.getItem('sites')) || [];
+                sites.push({ title, description, url });
+                localStorage.setItem('sites', JSON.stringify(sites));
+                closeAdminPanel(); // Fechar o painel após adicionar o site
+                loadSites(); // Atualizar a lista de sites
+            }
+        }
+
+        // Carrega os sites salvos
+        function loadSites() {
+            const siteList = document.getElementById('siteList');
+            const sites = JSON.parse(localStorage.getItem('sites')) || [];
+            siteList.innerHTML = ''; // Limpar a lista de sites
+
+            sites.forEach((site, index) => {
+                siteList.innerHTML += `
+                    <div>
+                        <p><strong>${site.title}</strong> - ${site.description}</p>
+                        <button onclick="deleteSite(${index})">Excluir</button>
+                    </div>
+                `;
+            });
+        }
+
+        // Deleta um site
+        function deleteSite(index) {
+            const sites = JSON.parse(localStorage.getItem('sites')) || [];
+            sites.splice(index, 1); // Remover o site
+            localStorage.setItem('sites', JSON.stringify(sites)); // Atualizar no localStorage
+            loadSites(); // Atualizar a lista de sites
+        }
+
+        // Inicializa a aparência de acordo com o horário atual
+        function init() {
+            const hours = new Date().getHours();
+            if (hours >= 6 && hours < 12) {
+                updateBackground(true, false); // Manhã
+            } else if (hours >= 12 && hours < 18) {
+                updateBackground(false, true); // Tarde
+            } else {
+                updateBackground(false, false); // Noite
+            }
+        }
+
+        init(); // Chama a função para definir o fundo e a lua
+    </script>
+</body>
+</html>
